@@ -17,8 +17,6 @@
 #include "env.h"
 #include "default_picture.h"
 
-#include <ArduinoJson.h>     // https://github.com/bblanchon/ArduinoJson
-
 #include <WiFiClient.h>
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
