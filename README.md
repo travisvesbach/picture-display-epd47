@@ -1,6 +1,6 @@
 # Picture Display EPD47
 
-An application for the LilyGo EPD47 ESP32 E-Ink board
+An application for the [LilyGo EPD47 ESP32 E-Ink board](https://github.com/Xinyuan-LilyGO/LilyGo-EPD47)
 
 The main purpose of this application is to retreive picture data from an api and display them on the e-ink screen.
 
