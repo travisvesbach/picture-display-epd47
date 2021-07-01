@@ -16,11 +16,11 @@
 
 #include "env.h"
 #include "default_picture.h"
+#include "low_battery.h"
 
 #include <WiFiClient.h>
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
-
 
 int current_hour = 0, current_min = 0, current_sec = 0;
 long start_time = 0;
@@ -41,6 +41,8 @@ void setup() {
 
             framebuffer = (uint8_t *)heap_caps_malloc(DISPLAY_WIDTH * DISPLAY_HEIGHT / 2, MALLOC_CAP_SPIRAM);
             memset(framebuffer, 0xFF, (DISPLAY_WIDTH * DISPLAY_HEIGHT)/2);
+
+            checkBattery();
 
             WiFiClient client;
             getImage(client);
@@ -115,18 +117,29 @@ bool getImage(WiFiClient& client) {
         char stream_bit;
         int bit_counter = 0;
 
-        while (stream.available() > 0) {
+        bool read = true;
+
+        while (stream.available() > 0 && read == true) {
             // read next bit
             stream_bit = stream.read();
+            if(stream_bit == '!') {
+                read = false;
+                break;
+            }
             // insert into char array
             received_chars[bit_counter] = stream_bit;
             bit_counter++;
             // if 3 bits inserted into array, convert to int, cast as uint8_t, and insert into next slot of framebuffer
-            if(bit_counter == 3) {
+            if(bit_counter == 3 && fb_counter < (DISPLAY_WIDTH * DISPLAY_HEIGHT)/2) {
                 framebuffer[fb_counter] = (uint8_t)atoi(received_chars);
                 fb_counter++;
                 bit_counter = 0;
             }
+        }
+        Serial.println(fb_counter);
+        if(fb_counter < (DISPLAY_WIDTH * DISPLAY_HEIGHT)/2) {
+            Serial.println("Failed.  Attempted to get new image.");
+            getImage(client);
         }
 
     } else {
@@ -217,4 +230,27 @@ boolean updateLocalTime() {
     current_min  = time.tm_min;
     current_sec  = time.tm_sec;
     return true;
+}
+
+// check battery level and if 15% or less, display icon
+void checkBattery() {
+    Serial.println("Checking battery level");
+    uint8_t percentage = 100;
+    float voltage = analogRead(35) / 4096.0 * 7.46;
+    if (voltage > 1 ) {
+        Serial.println("Voltage = " + String(voltage));
+        percentage = 2836.9625 * pow(voltage, 4) - 43987.4889 * pow(voltage, 3) + 255233.8134 * pow(voltage, 2) - 656689.7123 * voltage + 632041.7303;
+        Serial.println(percentage);
+        if (voltage >= 4.20) percentage = 100;
+        if (voltage <= 3.50) percentage = 0;
+        if (percentage <= 15) {
+            Rect_t area = {
+                .x = 0,
+                .y = 0,
+                .width = low_battery_width,
+                .height =  low_battery_height
+            };
+            epd_draw_grayscale_image(area, (uint8_t *) low_battery_data);
+        }
+    }
 }
