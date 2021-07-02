@@ -45,8 +45,18 @@ void setup() {
             checkBattery();
 
             WiFiClient client;
-            getImage(client);
-            displayImage();
+
+            int attempt = 0;
+            int image_received = false;
+            while (attempt < 3  && !image_received) {
+                attempt++;
+                image_received = getImage(client);
+            }
+            if(image_received) {
+                displayImage();
+            } else {
+                displayDefaultImage();
+            }
         }
 
         updateLocalTime();
@@ -102,10 +112,6 @@ bool getImage(WiFiClient& client) {
 
         WiFiClient stream = http.getStream();
 
-        // total incoming
-        // int len = http.getSize();
-        // Serial.println(len);
-
         // incoming is 3 digits
         char received_chars[4];
         // last cell is terminator
@@ -114,10 +120,9 @@ bool getImage(WiFiClient& client) {
         // counter for framebuffer index
         int fb_counter = 0;
 
-        char stream_bit;
         int bit_counter = 0;
-
         bool read = true;
+        char stream_bit;
 
         while (stream.available() > 0 && read == true) {
             // read next bit
@@ -138,14 +143,15 @@ bool getImage(WiFiClient& client) {
         }
         Serial.println(fb_counter);
         if(fb_counter < (DISPLAY_WIDTH * DISPLAY_HEIGHT)/2) {
-            Serial.println("Failed.  Attempted to get new image.");
-            getImage(client);
+            Serial.println("Stream failed.");
+            return false;
         }
 
     } else {
         Serial.println();
         Serial.printf("connection failed, error: %s", http.errorToString(httpCode).c_str());
         Serial.println();
+        return false;
     }
 
     client.stop();
@@ -163,6 +169,17 @@ void displayImage() {
         .height =  DISPLAY_HEIGHT
     };
     epd_draw_grayscale_image(area, framebuffer);
+}
+
+void displayDefaultImage() {
+    Serial.println("Displaying default image");
+    Rect_t area = {
+        .x = 0,
+        .y = 0,
+        .width = default_picture_width,
+        .height =  default_picture_height
+    };
+    epd_draw_grayscale_image(area, (uint8_t *) default_picture_data);
 }
 
 

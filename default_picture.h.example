@@ -1,0 +1,5 @@
+const uint32_t default_picture_width = 960;
+const uint32_t default_picture_height = 540;
+const uint8_t default_picture_data[(960*540)/2] = {
+
+}
