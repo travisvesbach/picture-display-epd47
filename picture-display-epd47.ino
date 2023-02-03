@@ -96,6 +96,7 @@ bool getImage(WiFiClient& client) {
     client.stop();
 
     HTTPClient http;
+
     http.getStream().setNoDelay(true);
     http.getStream().setTimeout(3000000);
     http.setConnectTimeout(3000000);
@@ -106,7 +107,7 @@ bool getImage(WiFiClient& client) {
     char snum[5];
     itoa(httpCode, snum, 10);
     Serial.printf("code: %s", snum);
-
+    Serial.println();
 
     if(httpCode == HTTP_CODE_OK) {
 
@@ -124,6 +125,8 @@ bool getImage(WiFiClient& client) {
         bool read = true;
         char stream_bit;
 
+        int fb_max = (DISPLAY_WIDTH * DISPLAY_HEIGHT)/2;
+
         while (stream.available() > 0 && read == true) {
             // read next bit
             stream_bit = stream.read();
@@ -135,14 +138,14 @@ bool getImage(WiFiClient& client) {
             received_chars[bit_counter] = stream_bit;
             bit_counter++;
             // if 3 bits inserted into array, convert to int, cast as uint8_t, and insert into next slot of framebuffer
-            if(bit_counter == 3 && fb_counter < (DISPLAY_WIDTH * DISPLAY_HEIGHT)/2) {
+            if(bit_counter == 3 && fb_counter < fb_max) {
                 framebuffer[fb_counter] = (uint8_t)atoi(received_chars);
                 fb_counter++;
                 bit_counter = 0;
             }
         }
         Serial.println(fb_counter);
-        if(fb_counter < (DISPLAY_WIDTH * DISPLAY_HEIGHT)/2) {
+        if(fb_counter < fb_max) {
             Serial.println("Stream failed.");
             return false;
         }
@@ -184,7 +187,7 @@ void displayDefaultImage() {
 
 
 uint8_t startWiFi() {
-    Serial.print("\r\nConnecting to: " + String(SSID));
+    Serial.println("\r\nConnecting to: " + String(SSID));
 
     // Google DNS
     // IPAddress dns(8, 8, 8, 8);
@@ -257,9 +260,9 @@ void checkBattery() {
     if (voltage > 1 ) {
         Serial.println("Voltage = " + String(voltage));
         percentage = 2836.9625 * pow(voltage, 4) - 43987.4889 * pow(voltage, 3) + 255233.8134 * pow(voltage, 2) - 656689.7123 * voltage + 632041.7303;
-        Serial.println(percentage);
-        if (voltage >= 4.20) percentage = 100;
-        if (voltage <= 3.50) percentage = 0;
+        Serial.println("percentage: " + String(percentage));
+        // if (voltage >= 4.20) percentage = 100;
+        // if (voltage <= 3.50) percentage = 0;
         if (percentage <= 15) {
             Rect_t area = {
                 .x = 0,
